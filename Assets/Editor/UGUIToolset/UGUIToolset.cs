@@ -1,4 +1,9 @@
-﻿using System;
+﻿//---------------------------------------
+//UGUI Toolset v0.5
+//Author: Andrew Vasiliev [@AndrewChewie]
+//---------------------------------------
+
+using System;
 using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
