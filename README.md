@@ -4,4 +4,4 @@ Handy toolbar with a list of most common actions needed during assembly of the U
 
 Allows for a quick and visual way of filling Game Objects with Components needed.
 
-![Image](https://i.imgur.com/UAVm2Qv.png)
+![Image](https://i.imgur.com/T3znhzd.gif)
