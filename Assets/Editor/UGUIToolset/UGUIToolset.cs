@@ -1,5 +1,5 @@
 ﻿//---------------------------------------
-//UGUI Toolset v0.5
+//UGUI Toolset v0.55
 //Author: Andrew Vasiliev [@AndrewChewie]
 //---------------------------------------
 
@@ -7,6 +7,7 @@ using System;
 using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using TMPro;
 using UnityEditor;
 using UnityEngine.UI;
@@ -129,7 +130,7 @@ public class UGUIToolset : EditorWindow
 
     private void OnGUI()
     {
-        SelectedObjects = new List<Transform>(Selection.transforms);
+        RefreshSelection();
 
         IncludeChild = GUILayout.Toggle(IncludeChild, "Include Child Objects", GUILayout.MinWidth(buttonWidth),GUILayout.MinHeight(20));
         
@@ -254,6 +255,11 @@ public class UGUIToolset : EditorWindow
         DrawUILine(Color.black);
     }
 
+    private void RefreshSelection()
+    {
+        SelectedObjects = new List<Transform>(Selection.transforms);
+    }
+
     public static void DrawUILine(Color color, int thickness = 2, int padding = 10)
     {
         Rect r = EditorGUILayout.GetControlRect(GUILayout.Height(padding + thickness));
@@ -264,23 +270,86 @@ public class UGUIToolset : EditorWindow
         EditorGUI.DrawRect(r, color);
     }
 
+    [MenuItem("Window/UGUI Toolset/Group objects %g")]
+    static void GroupObjects()
+    {
+        var toolset = GetWindow(typeof(UGUIToolset)) as UGUIToolset;
+        toolset?.GroupSelected();
+    }
+
     private void GroupSelected()
     {
-        if(SelectedObjects == null || SelectedObjects.Count == 0)
+        RefreshSelection();
+        
+        if (SelectedObjects == null || SelectedObjects.Count == 0)
             return;
 
         var parent = SelectedObjects[0].parent;
 
-        GameObject groupObject = new GameObject("Group", typeof(RectTransform));
-        groupObject.transform.SetParent(parent.transform);
-        groupObject.transform.localPosition = Vector3.zero;
+        GameObject groupObject = new GameObject("Group");
+        Undo.RegisterCreatedObjectUndo(groupObject, "Set new parent");
+
+        if (parent != null)
+        {
+            groupObject.transform.SetParent(parent.transform);
+        }
+        
+        if (isUIMode())
+        {
+            groupObject.AddComponent<RectTransform>();
+        }
+        
+        groupObject.transform.position = CenterOfSelection();
         groupObject.transform.localScale = Vector3.one;
 
         foreach (Transform o in SelectedObjects)
         {
-            o.SetParent(groupObject.transform);
+            Undo.SetTransformParent(o.transform, groupObject.transform, "Set new parent");
         }
+
+        Selection.activeGameObject = groupObject;
     }
+
+    private Vector3 CenterOfSelection()
+    {
+        if (_selectedObjects == null || _selectedObjects.Count == 0)
+            return Vector3.zero;
+        if (_selectedObjects.Count == 1)
+            return _selectedObjects[0].position;
+     
+        float minX = Mathf.Infinity;
+        float minY = Mathf.Infinity;
+        float minZ = Mathf.Infinity;
+     
+        float maxX = -Mathf.Infinity;
+        float maxY = -Mathf.Infinity;
+        float maxZ = -Mathf.Infinity;
+     
+        foreach (Transform tr in _selectedObjects) {
+            if (tr.position.x < minX)
+                minX = tr.position.x;
+            if (tr.position.y < minY)
+                minY = tr.position.y;
+            if (tr.position.z < minZ)
+                minZ = tr.position.z;
+         
+            if (tr.position.x > maxX)
+                maxX = tr.position.x;
+            if (tr.position.y > maxY)
+                maxY = tr.position.y;
+            if (tr.position.z > maxZ)
+                maxZ = tr.position.z;
+        }
+     
+        return new Vector3((minX+maxX)/2.0f,(minY+maxY)/2.0f,(minZ+maxZ)/2.0f); 
+    }
+
+    private bool isUIMode()
+    {
+        return _selectedObjects.All(transform => transform.GetComponent<RectTransform>());
+    }
+    
+    private List<RectTransform> _selectedRectTransforms => _selectedObjects?.Select(transform => transform.GetComponent<RectTransform>()).ToList();
 
     private void SwitchToTMP()
     {
